@@ -27,6 +27,9 @@ import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener.Builder.withContext
 
+import retrofit.*
+
+
 import java.util.jar.Manifest
 
 class MainActivity : AppCompatActivity() {
@@ -94,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER )
     }
+
     @SuppressLint("MissingPermission")
     private fun requestLocationData() {
 
@@ -125,11 +129,20 @@ class MainActivity : AppCompatActivity() {
 
         if (Constants.isNetworkAvailable(this@MainActivity)) {
 
-            Toast.makeText(
+            val retrofit : Retrofit =Retrofit.Builder().baseUrl(Constants.BASE_URL).
+            addConverterFactory(GsonConverterFactory.create()).build()
+
+
+
+
+
+           /* Toast.makeText(
                 this@MainActivity,
                 "You have connected to the internet. Now you can make an api call.",
                 Toast.LENGTH_SHORT
             ).show()
+
+            */
         } else {
             Toast.makeText(
                 this@MainActivity,

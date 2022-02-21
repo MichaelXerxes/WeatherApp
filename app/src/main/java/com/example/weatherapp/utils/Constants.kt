@@ -9,10 +9,9 @@ import android.os.Build
 // START
 object Constants {
 
-    // TODO (STEP 3: Add a function to check the network connection is available or not.)
-    /**
-     * This function is used check the weather the device is connected to the Internet or not.
-     */
+    const val APP_ID:String="*******"
+    const val BASE_URL:String="https://api.openweathermap.org/data/"
+    const val METRIC_UNIT:String="metric"
     fun isNetworkAvailable(context: Context): Boolean {
         // It answers the queries about the state of network connectivity.
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
