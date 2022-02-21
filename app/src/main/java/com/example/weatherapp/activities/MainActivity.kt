@@ -116,16 +116,13 @@ class MainActivity : AppCompatActivity() {
             val longitude = mLastLocation.longitude
             Log.i("Current Longitude", "$longitude")
 
-            // TODO (STEP 7: Call the api calling function here.)
+
             getLocationWeatherDetails()
         }
     }
     private fun getLocationWeatherDetails(){
 
-        // TODO (STEP 6: Here we will check whether the internet
-        //  connection is available or not using the method which
-        //  we have created in the Constants object.)
-        // START
+
         if (Constants.isNetworkAvailable(this@MainActivity)) {
 
             Toast.makeText(
@@ -140,6 +137,6 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
-        // END
+
     }
 }
