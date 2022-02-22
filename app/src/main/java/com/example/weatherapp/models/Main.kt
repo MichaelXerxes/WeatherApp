@@ -3,7 +3,7 @@ package com.example.weatherapp.models
 import java.io.Serializable
 
 data class Main (
-    val temp: Int,
+    val temp: Double,
     val pressure: Int,
     val humidity: Int,
     val tempMin: Int,

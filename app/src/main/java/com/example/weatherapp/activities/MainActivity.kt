@@ -2,22 +2,29 @@ package com.example.weatherapp.activities
 
 //import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.Menu
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.example.weatherapp.R
 
 
 import com.example.weatherapp.databinding.ActivityMainBinding
+import com.example.weatherapp.models.WeatherResponse
+import com.example.weatherapp.network.WeatherService
 import com.example.weatherapp.utils.Constants
 import com.google.android.gms.location.*
 import com.karumi.dexter.Dexter
@@ -28,6 +35,8 @@ import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import com.karumi.dexter.listener.single.DialogOnDeniedPermissionListener.Builder.withContext
 
 import retrofit.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 import java.util.jar.Manifest
@@ -35,6 +44,9 @@ import java.util.jar.Manifest
 class MainActivity : AppCompatActivity() {
     private var binding: ActivityMainBinding?=null
     private lateinit var mFusedLocationClient:FusedLocationProviderClient
+
+
+    private var mProgressDialog: Dialog?=null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding= ActivityMainBinding.inflate(layoutInflater)
@@ -121,18 +133,58 @@ class MainActivity : AppCompatActivity() {
             Log.i("Current Longitude", "$longitude")
 
 
-            getLocationWeatherDetails()
+            getLocationWeatherDetails(latitude,longitude)
         }
     }
-    private fun getLocationWeatherDetails(){
+    private fun getLocationWeatherDetails(latitude:Double,longitude:Double){
 
 
         if (Constants.isNetworkAvailable(this@MainActivity)) {
-
+            //1
             val retrofit : Retrofit =Retrofit.Builder().baseUrl(Constants.BASE_URL).
             addConverterFactory(GsonConverterFactory.create()).build()
+            //2
+            val service:WeatherService=retrofit.
+            create<WeatherService>(WeatherService::class.java)
+            //3
+            val listCall:Call<WeatherResponse> =service.getWeather(
+                latitude,longitude,Constants.METRIC_UNIT,Constants.APP_ID
+            )
 
+            showCustomProgressDialog()
 
+            listCall.enqueue(object :Callback<WeatherResponse>{
+                @RequiresApi(Build.VERSION_CODES.N)
+                override fun onResponse(response: Response<WeatherResponse>?, retrofit: Retrofit?) {
+                    if (response!!.isSuccess){
+
+                        hideCustomProgressDialog()
+
+                        val weatherList:WeatherResponse=response.body()
+                        setupUI(weatherList)
+
+                    }else{
+                        val rc=response.code()
+                        when(rc){
+                            400 -> {
+                                Log.e("Error 400", "Bad Connection")
+                            }
+                            404 -> {
+                                Log.e("Error 404","Not found")
+                            }
+                            else -> {
+                                Log.e("Error X","Error X and Lol")
+                            }
+                        }
+                    }
+                }
+
+                override fun onFailure(t: Throwable?) {
+                    Log.e("Error",t!!.message.toString())
+                    hideCustomProgressDialog()
+                }
+
+            })
 
 
 
@@ -152,4 +204,77 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+    ///
+    private fun showCustomProgressDialog(){
+        mProgressDialog= Dialog(this)
+
+        mProgressDialog!!.setContentView(R.layout.custom_dialog)
+        mProgressDialog!!.show()
+    }
+    private fun hideCustomProgressDialog(){
+        if(mProgressDialog!=null){
+            mProgressDialog!!.dismiss()
+        }
+    }
+    ///
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun setupUI(weatherList:WeatherResponse){
+        for(z in weatherList.weather.indices){
+            Log.i("Weather Name",weatherList.weather.toString())
+            binding?.tvMain?.text = weatherList.weather[z].main
+            binding?.tvMainDescription?.text = weatherList.weather[z].description
+            binding?.tvTemp?.text =
+                weatherList.main.temp.toString() + getUnit(application.resources.configuration.locales.toString())
+
+            binding?.tvHumidity?.text = weatherList.main.humidity.toString() + " per cent"
+            binding?.tvMin?.text = weatherList.main.tempMin.toString() + " min"
+            binding?.tvMax?.text = weatherList.main.tempMax.toString() + " max"
+            binding?.tvSpeed?.text = weatherList.wind.speed.toString()
+            binding?.tvName?.text = weatherList.name
+            binding?.tvCountry?.text = weatherList.sys.country
+            binding?.tvSunriseTime?.text = unixTime(weatherList.sys.sunrise.toLong())
+            binding?.tvSunsetTime?.text = unixTime(weatherList.sys.sunset.toLong())
+
+            // Here we update the main icon
+            when (weatherList.weather[z].icon) {
+                "01d" ->  binding?.ivMain?.setImageResource(R.drawable.sunny)
+                "02d" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "03d" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "04d" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "04n" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "10d" -> binding?.ivMain?.setImageResource(R.drawable.rain)
+                "11d" -> binding?.ivMain?.setImageResource(R.drawable.storm)
+                "13d" -> binding?.ivMain?.setImageResource(R.drawable.snowflake)
+                "01n" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "02n" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "03n" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "10n" -> binding?.ivMain?.setImageResource(R.drawable.cloud)
+                "11n" -> binding?.ivMain?.setImageResource(R.drawable.rain)
+                "13n" -> binding?.ivMain?.setImageResource(R.drawable.snowflake)
+            }
+
+        }
+    }
+    private fun getUnit(value: String): String? {
+        Log.i("unitttttt", value)
+        var value = "°C"
+        if ("US" == value || "LR" == value || "MM" == value) {
+            value = "°F"
+        }
+        return value
+    }
+    private fun unixTime(timex: Long): String? {
+        val date = Date(timex * 1000L)
+        @SuppressLint("SimpleDateFormat") val sdf =
+            SimpleDateFormat("HH:mm:ss")
+        sdf.timeZone = TimeZone.getDefault()
+        return sdf.format(date)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main,menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
 }
